@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "560366801052",
+    "project_id": "latinbarberapp",
+    "storage_bucket": "latinbarberapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:560366801052:android:63e06fbef27d69ab511d59",
+        "android_client_info": {
+          "package_name": "com.example.latinbarber.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATiqn-wizCw31QdiP6EBmJEsDzwlfNdYI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:560366801052:android:93519bc1dbd1c03c511d59",
+        "android_client_info": {
+          "package_name": "com.latinbarber.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATiqn-wizCw31QdiP6EBmJEsDzwlfNdYI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
