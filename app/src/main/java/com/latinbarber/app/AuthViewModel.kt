@@ -3,7 +3,8 @@ package com.latinbarber.app
 import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.auth.User
+// 👇 La línea mala era "import com.google.firebase.firestore.auth.User".
+// 👇 USAMOS ESTA, que es la tuya:
 import com.latinbarber.app.model.User
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
