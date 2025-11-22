@@ -3,8 +3,10 @@ package com.latinbarber.app
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,33 +26,32 @@ import com.latinbarber.app.ui.theme.WhiteText
 
 @Composable
 fun AuthScreen(viewModel: AuthViewModel = viewModel()) {
-    // Variables para guardar lo que escribe el usuario
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var isLoginMode by remember { mutableStateOf(true) } // ¿Está en Login o Registro?
+    var name by remember { mutableStateOf("") }   // Nuevo campo
+    var phone by remember { mutableStateOf("") }  // Nuevo campo
+    var isLoginMode by remember { mutableStateOf(true) }
 
     val authState by viewModel.authState.collectAsState()
     val context = LocalContext.current
 
-    // Reacción a los cambios de estado (Éxito o Error)
     LaunchedEffect(authState) {
         when (val state = authState) {
-            is AuthState.Error -> Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
-            is AuthState.Success -> Toast.makeText(context, "¡Bienvenido a Latin Barber!", Toast.LENGTH_SHORT).show()
+            is AuthState.Error -> Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
+            is AuthState.Success -> Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
             else -> {}
         }
     }
 
-    // DISEÑO VISUAL
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BlackBackground) // Fondo Negro
-            .padding(24.dp),
+            .background(BlackBackground)
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()), // Habilitamos scroll por si el teclado tapa
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Logo (Texto por ahora)
         Text(
             text = "LATIN BARBER",
             color = WhiteText,
@@ -61,68 +62,76 @@ fun AuthScreen(viewModel: AuthViewModel = viewModel()) {
 
         Spacer(modifier = Modifier.height(48.dp))
 
-        // Campo Email
+        // Si es registro, mostramos Nombre y Teléfono
+        if (!isLoginMode) {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Nombre Completo", color = Color.Gray) },
+                colors = fieldColors(),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = phone,
+                onValueChange = { phone = it },
+                label = { Text("Celular", color = Color.Gray) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                colors = fieldColors(),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
             label = { Text("Correo Electrónico", color = Color.Gray) },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = GoldPrimary,
-                unfocusedBorderColor = Color.Gray,
-                focusedTextColor = WhiteText,
-                unfocusedTextColor = WhiteText,
-                cursorColor = GoldPrimary
-            ),
+            colors = fieldColors(),
             modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Campo Password
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
             label = { Text("Contraseña", color = Color.Gray) },
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = GoldPrimary,
-                unfocusedBorderColor = Color.Gray,
-                focusedTextColor = WhiteText,
-                unfocusedTextColor = WhiteText,
-                cursorColor = GoldPrimary
-            ),
+            colors = fieldColors(),
             modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Botón Principal (Dorado)
         Button(
             onClick = {
                 if (isLoginMode) {
                     viewModel.login(email, password)
                 } else {
-                    viewModel.register(email, password)
+                    viewModel.register(email, password, name, phone)
                 }
             },
             colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),
             shape = RoundedCornerShape(8.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp)
+            modifier = Modifier.fillMaxWidth().height(50.dp)
         ) {
-            Text(
-                text = if (isLoginMode) "INICIAR SESIÓN" else "REGISTRARSE",
-                color = BlackBackground, // Texto negro sobre botón dorado
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
-            )
+            if (authState is AuthState.Loading) {
+                CircularProgressIndicator(color = BlackBackground, modifier = Modifier.size(24.dp))
+            } else {
+                Text(
+                    text = if (isLoginMode) "INICIAR SESIÓN" else "REGISTRARSE",
+                    color = BlackBackground,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Botón para cambiar entre Login y Registro
         TextButton(onClick = { isLoginMode = !isLoginMode }) {
             Text(
                 text = if (isLoginMode) "¿No tienes cuenta? Regístrate aquí" else "¿Ya tienes cuenta? Inicia sesión",
@@ -131,3 +140,13 @@ fun AuthScreen(viewModel: AuthViewModel = viewModel()) {
         }
     }
 }
+
+// Función auxiliar para no repetir colores
+@Composable
+fun fieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = GoldPrimary,
+    unfocusedBorderColor = Color.Gray,
+    focusedTextColor = WhiteText,
+    unfocusedTextColor = WhiteText,
+    cursorColor = GoldPrimary
+)
