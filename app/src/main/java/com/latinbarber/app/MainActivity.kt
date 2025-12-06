@@ -6,25 +6,90 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.latinbarber.app.ui.theme.LatinBarberTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // setContent es el contenedor principal para dibujar en Compose
         setContent {
-            // Aplicamos el tema de la app
             LatinBarberTheme {
-                // Surface es como el "lienzo" o fondo base.
-                // Le decimos que ocupe todo el tamaño disponible (fillMaxSize)
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // ¡AQUÍ ADENTRO es el lugar correcto para llamar a tu pantalla!
-                    // Si esto estuviera fuera de 'Surface' o 'setContent', daría el error 3.
-                    AuthScreen()
+                    // Sistema de Navegación
+                    val navController = rememberNavController()
+                    // Compartimos el ViewModel para saber si el usuario está logueado
+                    val authViewModel: AuthViewModel = viewModel()
+                    val authState by authViewModel.authState.collectAsState()
+                    val userRole by authViewModel.userRole.collectAsState() // <--- OJO AQUÍ
+
+                    // Observamos el estado: Si el login es exitoso, navegamos a Home
+                    LaunchedEffect(authState, userRole) {
+                        if (authState is AuthState.Success) {
+                            // DECISIÓN DE RUTA BASADA EN EL ROL
+                            if (userRole == "admin") {
+                                navController.navigate("admin_home") {
+                                    popUpTo("auth") { inclusive = true }
+                                }
+                            } else {
+                                navController.navigate("home") {
+                                    popUpTo("auth") { inclusive = true }
+                                }
+                            }
+                        }
+                    }
+
+                    NavHost(navController = navController, startDestination = "auth") {
+                        composable("auth") { AuthScreen(viewModel = authViewModel) }
+
+                        composable("home") {
+                            HomeScreen(
+                                onLogout = { navController.navigate("auth") },
+                                onBookAppointment = { navController.navigate("booking") },
+                                onMyAppointments = { navController.navigate("appointments") } // <--- CONEXIÓN
+                            )
+                        }
+
+                        // 👇 AGREGAMOS LA NUEVA PANTALLA
+                        composable("booking") {
+                            BookingScreen(
+                                onBack = { navController.popBackStack() } // Para volver al Home
+                            )
+                        }
+
+                        composable("appointments") {
+                            AppointmentsScreen(
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+
+                        composable("admin_home") {
+                            AdminScreen(
+                                onLogout = { navController.navigate("auth") },
+                                onViewAppointments = { navController.navigate("admin_appointments") },
+                                onManageBarbers = { navController.navigate("admin_barbers") } // <--- ¡LISTO!
+                            )
+                        }
+
+                        composable("admin_appointments") {
+                            AdminAppointmentsScreen(
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+
+                        composable("admin_barbers") {
+                            AdminBarbersScreen(
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                    }
                 }
             }
         }

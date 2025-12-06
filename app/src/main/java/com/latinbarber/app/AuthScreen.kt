@@ -1,26 +1,31 @@
 package com.latinbarber.app
 
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.latinbarber.app.ui.theme.BlackBackground
-import com.latinbarber.app.ui.theme.DarkSurface
 import com.latinbarber.app.ui.theme.GoldPrimary
 import com.latinbarber.app.ui.theme.WhiteText
 
@@ -28,9 +33,12 @@ import com.latinbarber.app.ui.theme.WhiteText
 fun AuthScreen(viewModel: AuthViewModel = viewModel()) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var name by remember { mutableStateOf("") }   // Nuevo campo
-    var phone by remember { mutableStateOf("") }  // Nuevo campo
+    var name by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
     var isLoginMode by remember { mutableStateOf(true) }
+
+    // NUEVO ESTADO: Para controlar si la contraseña se ve o no
+    var isPasswordVisible by remember { mutableStateOf(false) }
 
     val authState by viewModel.authState.collectAsState()
     val context = LocalContext.current
@@ -48,21 +56,32 @@ fun AuthScreen(viewModel: AuthViewModel = viewModel()) {
             .fillMaxSize()
             .background(BlackBackground)
             .padding(24.dp)
-            .verticalScroll(rememberScrollState()), // Habilitamos scroll por si el teclado tapa
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = "LATIN BARBER",
-            color = WhiteText,
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 2.sp
+        // === CAMBIO 1: EL LOGO ===
+        // Reemplazamos el Texto por la Imagen
+        Image(
+            // ASEGÚRATE DE QUE EL NOMBRE COINCIDA CON EL ARCHIVO QUE PEGASTE EN DRAWABLE
+            painter = painterResource(id = R.drawable.logo_lb),
+            contentDescription = "Logo Latin Barber",
+            modifier = Modifier
+                .size(180.dp) // Ajusta el tamaño según necesites (ej. 200.dp, 150.dp)
+                .padding(bottom = 16.dp)
         )
 
-        Spacer(modifier = Modifier.height(48.dp))
+        // Opcional: Dejamos el texto del nombre más pequeño abajo del logo
+        //Text(
+        //   text = "LATIN BARBER",
+        //    color = GoldPrimary,
+        //   fontSize = 24.sp,
+        //    fontWeight = FontWeight.Bold,
+        //  letterSpacing = 2.sp
+        // )
 
-        // Si es registro, mostramos Nombre y Teléfono
+        Spacer(modifier = Modifier.height(32.dp))
+
         if (!isLoginMode) {
             OutlinedTextField(
                 value = name,
@@ -94,14 +113,31 @@ fun AuthScreen(viewModel: AuthViewModel = viewModel()) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // === CAMBIO 2: CAMPO DE CONTRASEÑA CON OJITO ===
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
             label = { Text("Contraseña", color = Color.Gray) },
-            visualTransformation = PasswordVisualTransformation(),
+            // Aquí está la magia: cambiamos la transformación visual según el estado
+            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             colors = fieldColors(),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            // Agregamos el icono al final
+            trailingIcon = {
+                val iconImage = if (isPasswordVisible)
+                    Icons.Filled.Visibility // Ojito abierto
+                else
+                    Icons.Filled.VisibilityOff // Ojito tachado
+
+                IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                    Icon(
+                        imageVector = iconImage,
+                        contentDescription = if (isPasswordVisible) "Ocultar contraseña" else "Mostrar contraseña",
+                        tint = GoldPrimary // El icono será dorado
+                    )
+                }
+            }
         )
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -141,7 +177,6 @@ fun AuthScreen(viewModel: AuthViewModel = viewModel()) {
     }
 }
 
-// Función auxiliar para no repetir colores
 @Composable
 fun fieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = GoldPrimary,
