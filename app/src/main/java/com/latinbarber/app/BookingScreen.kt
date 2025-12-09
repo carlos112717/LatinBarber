@@ -34,6 +34,8 @@ fun BookingScreen(
     val services by viewModel.services.collectAsState()
     val date by viewModel.selectedDate.collectAsState()
     val time by viewModel.selectedTime.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current // <--- OBTENER CONTEXTO
+    val notificationHelper = remember { NotificationHelper(context) } // <--- INICIALIZAR HELPER
 
     // Variables simples para la UI
     var step by remember { mutableStateOf(1) } // 1: Barbero, 2: Servicio, 3: Fecha
@@ -222,10 +224,27 @@ fun BookingScreen(
                         onClick = {
                             // LLAMAMOS A LA FUNCIÓN DE GUARDAR
                             viewModel.saveBooking(
-                                onSuccess = { step = 4 }, // Si guarda bien, vamos al paso 4 (Éxito)
-                                onError = { /* Aquí podrías mostrar un Toast */ }
+                                onSuccess = {
+                                    // 1. Lanzar notificación inmediata
+                                    notificationHelper.showConfirmationNotification(
+                                        barberName = viewModel.selectedBarber?.name ?: "Tu Barbero",
+                                        time = time
+                                    )
+
+                                    // 2. Programar la alarma (Recordatorio)
+                                    notificationHelper.scheduleReminder(
+                                        appointmentId = (0..10000).random(), // ID único para la alarma
+                                        dateString = date, // Por ahora usaremos el tiempo relativo
+                                        timeString = time
+                                    )
+
+                                    // 3. Avanzar a la pantalla de éxito
+                                    step = 4
+                                },
+                                onError = { /* Manejo de error opcional */ }
                             )
                         },
+
                         colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),
                         modifier = Modifier.fillMaxWidth().height(50.dp),
                         enabled = !isSaving // Deshabilitar si está guardando

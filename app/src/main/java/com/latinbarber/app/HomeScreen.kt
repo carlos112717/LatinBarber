@@ -26,9 +26,11 @@ import com.latinbarber.app.ui.theme.WhiteText
 
 @Composable
 fun HomeScreen(
+    userName: String,
     onLogout: () -> Unit,
-    onBookAppointment: () -> Unit, // Acción para cuando creemos la pantalla de citas
-    onMyAppointments: () -> Unit
+    onBookAppointment: () -> Unit,
+    onMyAppointments: () -> Unit,
+    onProfile: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -43,7 +45,7 @@ fun HomeScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text(text = "Hola, Cliente", color = Color.Gray, fontSize = 14.sp)
+                Text(text = "Hola, $userName", color = Color.Gray, fontSize = 14.sp)
                 Text(
                     text = "Bienvenido a Latin Barber",
                     color = WhiteText,
@@ -86,7 +88,7 @@ fun HomeScreen(
                     title = "Perfil",
                     subtitle = "Mis datos",
                     icon = Icons.Default.Person,
-                    onClick = { /* Por hacer */ }
+                    onClick = onProfile
                 )
             }
         }

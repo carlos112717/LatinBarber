@@ -29,8 +29,13 @@ fun AdminAppointmentsScreen(
     onBack: () -> Unit,
     viewModel: AdminAppointmentsViewModel = viewModel()
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val appointments by viewModel.appointments.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.startListening(context)
+    }
 
     Scaffold(
         topBar = {

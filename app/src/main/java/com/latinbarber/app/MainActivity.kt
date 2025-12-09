@@ -13,11 +13,35 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.latinbarber.app.ui.theme.LatinBarberTheme
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            val context = LocalContext.current
+            val launcher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.RequestPermission(),
+                onResult = { isGranted ->
+                    // Aquí podrías guardar si aceptó o no
+                }
+            )
+
+            SideEffect {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                        launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                }
+            }
+
             LatinBarberTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -50,10 +74,13 @@ class MainActivity : ComponentActivity() {
                         composable("auth") { AuthScreen(viewModel = authViewModel) }
 
                         composable("home") {
+                            val userName by authViewModel.userName.collectAsState()
                             HomeScreen(
+                                userName = userName,
                                 onLogout = { navController.navigate("auth") },
                                 onBookAppointment = { navController.navigate("booking") },
-                                onMyAppointments = { navController.navigate("appointments") } // <--- CONEXIÓN
+                                onMyAppointments = { navController.navigate("appointments") },
+                                onProfile = { navController.navigate("profile") }
                             )
                         }
 
@@ -74,7 +101,9 @@ class MainActivity : ComponentActivity() {
                             AdminScreen(
                                 onLogout = { navController.navigate("auth") },
                                 onViewAppointments = { navController.navigate("admin_appointments") },
-                                onManageBarbers = { navController.navigate("admin_barbers") } // <--- ¡LISTO!
+                                onManageBarbers = { navController.navigate("admin_barbers") },
+                                onManageServices = { navController.navigate("admin_services") },
+                                onManageHours = { navController.navigate("admin_hours") }
                             )
                         }
 
@@ -87,6 +116,24 @@ class MainActivity : ComponentActivity() {
                         composable("admin_barbers") {
                             AdminBarbersScreen(
                                 onBack = { navController.popBackStack() }
+                            )
+                        }
+
+                        composable("admin_services") {
+                            AdminServicesScreen(
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+
+                        composable("profile") {
+                            ProfileScreen(
+                                onBack = { navController.popBackStack() },
+                                onAccountDeleted = {
+                                    // Si borra la cuenta, lo mandamos al login y limpiamos historial
+                                    navController.navigate("auth") {
+                                        popUpTo("auth") { inclusive = true }
+                                    }
+                                }
                             )
                         }
                     }

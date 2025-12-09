@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -23,7 +24,9 @@ import com.latinbarber.app.ui.theme.WhiteText
 fun AdminScreen(
     onLogout: () -> Unit,
     onViewAppointments: () -> Unit,
-    onManageBarbers: () -> Unit
+    onManageBarbers: () -> Unit,
+    onManageServices: () -> Unit,
+    onManageHours: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -53,7 +56,6 @@ fun AdminScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Botones de Gestión (Reutilizamos ActionCard si quieres, o botones simples)
         // 1. VER TODAS LAS CITAS - AGENDA DE CITAS
         ActionCard(
             title = "Agenda de Citas",
@@ -65,12 +67,13 @@ fun AdminScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 2. GESTIONAR BARBEROS
+        // 2. GESTIONAR BARBEROS (¡AQUÍ ESTABA EL ERROR!)
         ActionCard(
             title = "Barberos",
             subtitle = "Agregar o eliminar personal",
             icon = Icons.Default.PersonAdd,
-            onClick = { onManageBarbers }
+            // 👇 CORREGIDO: Agregamos () para que SE EJECUTE al hacer clic
+            onClick = { onManageBarbers() }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -80,7 +83,17 @@ fun AdminScreen(
             title = "Servicios y Precios",
             subtitle = "Editar catálogo",
             icon = Icons.Default.ContentCut,
-            onClick = { /* Próximamente */ }
+            onClick = {onManageServices()}
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 4. GESTIONAR HORARIOS
+        ActionCard(
+            title = "Horarios",
+            subtitle = "Apertura y Cierre",
+            icon = Icons.Default.Schedule, // Necesita import androidx.compose.material.icons.filled.Schedule
+            onClick = { onManageHours() }
         )
     }
 }
