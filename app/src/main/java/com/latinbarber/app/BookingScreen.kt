@@ -34,6 +34,7 @@ fun BookingScreen(
     val services by viewModel.services.collectAsState()
     val date by viewModel.selectedDate.collectAsState()
     val time by viewModel.selectedTime.collectAsState()
+    val availableSlots by viewModel.availableSlots.collectAsState()
     val context = androidx.compose.ui.platform.LocalContext.current // <--- OBTENER CONTEXTO
     val notificationHelper = remember { NotificationHelper(context) } // <--- INICIALIZAR HELPER
 
@@ -187,13 +188,11 @@ fun BookingScreen(
                     Text("Horarios Disponibles:", color = Color.Gray, fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    val timeSlots = listOf("09:00", "09:30", "10:00", "10:30", "11:00", "14:00", "15:00", "16:00")
-
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        timeSlots.forEach { slot ->
+                        availableSlots.forEach { slot ->
                             val isSelected = (time == slot)
                             FilterChip(
                                 selected = isSelected,

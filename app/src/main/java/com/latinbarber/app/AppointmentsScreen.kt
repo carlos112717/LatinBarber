@@ -1,5 +1,6 @@
 package com.latinbarber.app
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -7,12 +8,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,6 +34,16 @@ fun AppointmentsScreen(
 ) {
     val appointments by viewModel.appointments.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val toastMsg by viewModel.toastMessage.collectAsState()
+    val context = LocalContext.current
+
+    // Escuchamos los mensajes del ViewModel (Errores o Éxito al cancelar)
+    LaunchedEffect(toastMsg) {
+        toastMsg?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            viewModel.clearToast()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -68,7 +81,10 @@ fun AppointmentsScreen(
                 // LISTA DE CITAS
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(appointments) { appointment ->
-                        AppointmentCard(appointment)
+                        AppointmentCard(
+                            appointment = appointment,
+                            onCancelClick = { viewModel.cancelAppointment(appointment) }
+                        )
                     }
                 }
             }
@@ -77,7 +93,10 @@ fun AppointmentsScreen(
 }
 
 @Composable
-fun AppointmentCard(appointment: Appointment) {
+fun AppointmentCard(
+    appointment: Appointment,
+    onCancelClick: () -> Unit
+) {
     Card(
         colors = CardDefaults.cardColors(containerColor = DarkSurface),
         shape = RoundedCornerShape(12.dp),
@@ -103,7 +122,7 @@ fun AppointmentCard(appointment: Appointment) {
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            Divider(color = Color.Gray.copy(alpha = 0.3f))
+            HorizontalDivider(color = Color.Gray.copy(alpha = 0.3f))
             Spacer(modifier = Modifier.height(8.dp))
 
             // Detalles: Barbero y Fecha
@@ -126,13 +145,27 @@ fun AppointmentCard(appointment: Appointment) {
                 )
             }
 
-            // Estado (Opcional)
+            // Estado
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = if(appointment.status == "confirmada") "● Confirmada" else "● Pendiente",
                 color = if(appointment.status == "confirmada") Color.Green else Color.Yellow,
                 fontSize = 12.sp
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // BOTÓN CANCELAR (Rojo)
+            Button(
+                onClick = onCancelClick,
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Red.copy(alpha = 0.8f)),
+                modifier = Modifier.fillMaxWidth().height(40.dp),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Icon(Icons.Default.Cancel, null, tint = WhiteText, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("CANCELAR CITA", color = WhiteText, fontSize = 14.sp)
+            }
         }
     }
 }

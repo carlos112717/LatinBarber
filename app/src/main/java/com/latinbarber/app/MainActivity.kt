@@ -103,7 +103,8 @@ class MainActivity : ComponentActivity() {
                                 onViewAppointments = { navController.navigate("admin_appointments") },
                                 onManageBarbers = { navController.navigate("admin_barbers") },
                                 onManageServices = { navController.navigate("admin_services") },
-                                onManageHours = { navController.navigate("admin_hours") }
+                                onManageHours = { navController.navigate("admin_hours") },
+                                onViewReports = { navController.navigate("admin_reports") }
                             )
                         }
 
@@ -135,6 +136,14 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             )
+                        }
+                        composable("admin_hours") {
+                            AdminHoursScreen(
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                        composable("admin_reports") {
+                            AdminReportsScreen(onBack = { navController.popBackStack() })
                         }
                     }
                 }

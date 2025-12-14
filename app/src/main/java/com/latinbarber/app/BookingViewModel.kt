@@ -6,8 +6,12 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.latinbarber.app.model.Appointment
 import com.latinbarber.app.model.Barber
 import com.latinbarber.app.model.Service
+import com.latinbarber.app.model.ShopConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 class BookingViewModel : ViewModel() {
     private val firestore = FirebaseFirestore.getInstance()
@@ -20,7 +24,10 @@ class BookingViewModel : ViewModel() {
     private val _services = MutableStateFlow<List<Service>>(emptyList())
     val services = _services.asStateFlow()
 
-    // Estado de la selección
+    // Horas disponibles (Ya filtradas)
+    private val _availableSlots = MutableStateFlow<List<String>>(emptyList())
+    val availableSlots = _availableSlots.asStateFlow()
+
     var selectedBarber: Barber? = null
     var selectedService: Service? = null
 
@@ -30,64 +37,143 @@ class BookingViewModel : ViewModel() {
     private val _selectedTime = MutableStateFlow<String>("")
     val selectedTime = _selectedTime.asStateFlow()
 
-    // Estado de carga
     private val _isSaving = MutableStateFlow(false)
     val isSaving = _isSaving.asStateFlow()
+
+    // Guardamos la configuración de la tienda para reusarla
+    private var shopOpenTime = "09:00"
+    private var shopCloseTime = "20:00"
 
     init {
         fetchBarbers()
         fetchServices()
+        fetchShopConfig()
     }
 
-    private fun fetchBarbers() {
-        firestore.collection("barbers").get()
-            .addOnSuccessListener { result ->
-                val list = result.toObjects(Barber::class.java)
-                _barbers.value = list
+    private fun fetchShopConfig() {
+        firestore.collection("config").document("general").get()
+            .addOnSuccessListener { doc ->
+                if (doc.exists()) {
+                    val config = doc.toObject(ShopConfig::class.java)
+                    if (config != null) {
+                        shopOpenTime = config.openTime
+                        shopCloseTime = config.closeTime
+                    }
+                }
             }
+    }
+
+    // --- LÓGICA DE FILTRADO ---
+
+    // 1. Cuando seleccionas fecha, buscamos qué horas están ocupadas
+    fun onDateSelected(date: Long) {
+        val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+        val dateString = formatter.format(java.util.Date(date))
+        _selectedDate.value = dateString
+
+        // Llamamos a cargar los horarios libres
+        loadAvailableSlots(dateString)
+    }
+
+    private fun loadAvailableSlots(date: String) {
+        val barberName = selectedBarber?.name ?: return
+
+        // Consultamos Firebase: "Dame todas las citas de ESTE barbero en ESTA fecha"
+        firestore.collection("appointments")
+            .whereEqualTo("barberName", barberName)
+            .whereEqualTo("date", date)
+            .get()
+            .addOnSuccessListener { result ->
+                // Creamos una lista con las horas que YA están ocupadas
+                val occupiedTimes = result.documents.mapNotNull { doc ->
+                    doc.getString("time")
+                }
+
+                // Generamos todas las horas y restamos las ocupadas
+                generateTimeSlots(shopOpenTime, shopCloseTime, occupiedTimes)
+            }
+            .addOnFailureListener {
+                // Si falla, mostramos todo por defecto
+                generateTimeSlots(shopOpenTime, shopCloseTime, emptyList())
+            }
+    }
+
+    private fun generateTimeSlots(openTime: String, closeTime: String, occupiedTimes: List<String>) {
+        val slots = mutableListOf<String>()
+        try {
+            val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
+            val start = Calendar.getInstance().apply { time = sdf.parse(openTime)!! }
+            val end = Calendar.getInstance().apply { time = sdf.parse(closeTime)!! }
+
+            while (start.before(end)) {
+                val slotTime = sdf.format(start.time)
+
+                // SOLO AGREGAMOS SI NO ESTÁ OCUPADA
+                if (!occupiedTimes.contains(slotTime)) {
+                    slots.add(slotTime)
+                }
+
+                start.add(Calendar.MINUTE, 60)
+            }
+            _availableSlots.value = slots
+        } catch (e: Exception) {
+            e.printStackTrace()
+            _availableSlots.value = emptyList()
+        }
+    }
+
+    // ... resto de funciones (fetchBarbers, saveBooking, onTimeSelected) igual que antes ...
+
+    private fun fetchBarbers() {
+        firestore.collection("barbers").get().addOnSuccessListener {
+            _barbers.value = it.toObjects(Barber::class.java)
+        }
     }
 
     private fun fetchServices() {
-        firestore.collection("services").get()
+        firestore.collection("services").get().addOnSuccessListener {
+            _services.value = it.toObjects(Service::class.java)
+        }
+    }
+
+    fun onTimeSelected(time: String) { _selectedTime.value = time }
+
+    fun saveBooking(onSuccess: () -> Unit, onError: (String) -> Unit) {
+        val user = auth.currentUser ?: return onError("No logueado")
+
+        // DOBLE CHEQUEO DE SEGURIDAD (Por si dos personas reservan al mismo milisegundo)
+        val barberName = selectedBarber?.name ?: ""
+        val date = _selectedDate.value
+        val time = _selectedTime.value
+
+        firestore.collection("appointments")
+            .whereEqualTo("barberName", barberName)
+            .whereEqualTo("date", date)
+            .whereEqualTo("time", time)
+            .get()
             .addOnSuccessListener { result ->
-                val list = result.toObjects(Service::class.java)
-                _services.value = list
+                if (!result.isEmpty) {
+                    onError("¡Lo siento! Alguien acaba de ganar esta hora. Elige otra.")
+                    // Recargamos los slots para que se actualice la vista
+                    loadAvailableSlots(date)
+                } else {
+                    // Si está libre, procedemos a guardar (tu código original de guardar)
+                    performSave(user, onSuccess, onError)
+                }
             }
     }
 
-    fun onDateSelected(date: Long) {
-        val formatter = java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault())
-        _selectedDate.value = formatter.format(java.util.Date(date))
-    }
-
-    fun onTimeSelected(time: String) {
-        _selectedTime.value = time
-    }
-
-    // --- FUNCIÓN CORREGIDA ---
-    fun saveBooking(onSuccess: () -> Unit, onError: (String) -> Unit) {
-        val user = auth.currentUser
-
-        // 1. Verificamos que el usuario exista antes de hacer nada
-        if (user == null) {
-            onError("No estás logueado")
-            return
-        }
-
+    private fun performSave(user: com.google.firebase.auth.FirebaseUser, onSuccess: () -> Unit, onError: (String) -> Unit) {
         _isSaving.value = true
-
-        // 2. Buscamos el nombre verdadero en la base de datos 'users'
         firestore.collection("users").document(user.uid).get()
             .addOnSuccessListener { document ->
-                // Aquí adentro 'document' SÍ existe
                 val realName = document.getString("name") ?: user.email ?: "Cliente"
                 val realEmail = user.email ?: ""
 
-                // 3. Creamos el objeto Cita
                 val newAppointment = Appointment(
                     userId = user.uid,
                     customerName = realName,
-                    customerEmail = realEmail, // Guardamos el correo
+                    customerEmail = realEmail,
                     barberName = selectedBarber?.name ?: "Sin asignar",
                     serviceName = selectedService?.name ?: "Servicio",
                     price = selectedService?.price ?: 0.0,
@@ -96,21 +182,15 @@ class BookingViewModel : ViewModel() {
                     status = "confirmada"
                 )
 
-                // 4. Guardamos la cita en 'appointments'
-                firestore.collection("appointments")
-                    .add(newAppointment)
+                firestore.collection("appointments").add(newAppointment)
                     .addOnSuccessListener {
                         _isSaving.value = false
                         onSuccess()
                     }
-                    .addOnFailureListener { e ->
+                    .addOnFailureListener {
                         _isSaving.value = false
-                        onError(e.message ?: "Error al guardar")
+                        onError(it.message ?: "Error")
                     }
-            }
-            .addOnFailureListener { e ->
-                _isSaving.value = false
-                onError("Error al obtener datos del usuario: ${e.message}")
             }
     }
 }

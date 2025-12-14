@@ -7,16 +7,19 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.firestore.FirebaseFirestore
 import com.latinbarber.app.model.Appointment
 import com.latinbarber.app.ui.theme.BlackBackground
 import com.latinbarber.app.ui.theme.DarkSurface
@@ -29,10 +32,11 @@ fun AdminAppointmentsScreen(
     onBack: () -> Unit,
     viewModel: AdminAppointmentsViewModel = viewModel()
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
     val appointments by viewModel.appointments.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val context = LocalContext.current
 
+    // 👇 INICIAMOS LA ESCUCHA EN TIEMPO REAL AL ABRIR LA PANTALLA
     LaunchedEffect(Unit) {
         viewModel.startListening(context)
     }
@@ -68,7 +72,16 @@ fun AdminAppointmentsScreen(
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(appointments) { appointment ->
-                        AdminAppointmentCard(appointment)
+                        AdminAppointmentCard(
+                            appointment = appointment,
+                            // 👇 ACCIÓN DE BORRAR (Directo a Firebase para máxima potencia)
+                            onDelete = {
+                                FirebaseFirestore.getInstance()
+                                    .collection("appointments")
+                                    .document(appointment.id)
+                                    .delete()
+                            }
+                        )
                     }
                 }
             }
@@ -77,7 +90,7 @@ fun AdminAppointmentsScreen(
 }
 
 @Composable
-fun AdminAppointmentCard(appointment: Appointment) {
+fun AdminAppointmentCard(appointment: Appointment, onDelete: () -> Unit) {
     Card(
         colors = CardDefaults.cardColors(containerColor = DarkSurface),
         shape = RoundedCornerShape(12.dp),
@@ -87,7 +100,7 @@ fun AdminAppointmentCard(appointment: Appointment) {
             // --- FILA SUPERIOR: DATOS DEL CLIENTE Y PRECIO ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically // Centrado vertical
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 // Icono de persona
                 Icon(
@@ -99,30 +112,29 @@ fun AdminAppointmentCard(appointment: Appointment) {
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                // Columna central (Nombre y Correo) - Le damos peso 1f
+                // Columna central (Nombre y Correo)
                 Column(modifier = Modifier.weight(1f)) {
-                    // 1. NOMBRE DEL CLIENTE (Grande y visible)
+                    // 1. NOMBRE DEL CLIENTE
                     Text(
-                        text = appointment.customerName.ifEmpty { "Cliente" },
+                        text = if (appointment.customerName.isNotEmpty()) appointment.customerName else "Cliente",
                         color = WhiteText,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1
                     )
 
-                    /* 2. CORREO ELECTRÓNICO (Ahora sí mostramos el correo)
+                    // 2. CORREO ELECTRÓNICO
                     Text(
-                        // Si el campo tiene email lo muestra, si no (citas viejas), muestra "Sin correo"
-                       text = appointment.customerEmail.ifEmpty { "Sin correo" },
+                        text = if (appointment.customerEmail.isNotEmpty()) appointment.customerEmail else "Sin correo",
                         color = Color.Gray,
-                        fontSize = 14.sp, // Un poquito más grande para que se lea bien
+                        fontSize = 14.sp,
                         maxLines = 1
-                    )*/
+                    )
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // PRECIO (Siempre a la derecha)
+                // PRECIO
                 Text(
                     text = "${appointment.price} €",
                     color = GoldPrimary,
@@ -135,9 +147,7 @@ fun AdminAppointmentCard(appointment: Appointment) {
             HorizontalDivider(color = Color.Gray.copy(alpha = 0.3f))
             Spacer(modifier = Modifier.height(12.dp))
 
-            // --- FILA INFERIOR: DETALLES DE LA CITA ---
-
-            // Servicio y Barbero
+            // --- FILA MEDIO: DETALLES ---
             Text(
                 text = "${appointment.serviceName} con ${appointment.barberName}",
                 color = WhiteText,
@@ -146,9 +156,8 @@ fun AdminAppointmentCard(appointment: Appointment) {
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            // Fecha y Hora (Con iconos pequeños si quieres)
+            // Fecha y Hora
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Puedes usar un icono de calendario aquí si quieres
                 Text(
                     text = "📅 ${appointment.date}",
                     color = Color.Gray,
@@ -157,10 +166,24 @@ fun AdminAppointmentCard(appointment: Appointment) {
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(
                     text = "⏰ ${appointment.time}",
-                    color = Color.Gray, // O GoldPrimary si quieres resaltarlo
+                    color = Color.Gray,
                     fontSize = 14.sp
                 )
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // --- BOTÓN ELIMINAR (SOLO ADMIN) ---
+            Button(
+                onClick = onDelete,
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Red.copy(alpha = 0.9f)),
+                modifier = Modifier.fillMaxWidth().height(40.dp),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Icon(Icons.Default.Delete, null, tint = WhiteText, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("ELIMINAR CITA", color = WhiteText, fontWeight = FontWeight.Bold)
+            }
         }
     }
-    }
+}

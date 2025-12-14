@@ -88,6 +88,8 @@ class NotificationHelper(private val context: Context) {
         }
     }
 
+
+
     // 3. Notificación para el ADMIN (Nueva Reserva Recibida)
     fun showNewBookingNotification(customerName: String, time: String) {
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
@@ -100,4 +102,18 @@ class NotificationHelper(private val context: Context) {
 
         notificationManager.notify(System.currentTimeMillis().toInt(), notification)
     }
+
+    // 4. Notificación de CANCELACIÓN (Para el Admin)
+    fun showCancellationNotification(customerName: String, time: String) {
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_delete) // Icono de papelera o X
+            .setContentTitle("❌ Cita Cancelada")
+            .setContentText("$customerName ha cancelado su cita de las $time")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+
+        notificationManager.notify(System.currentTimeMillis().toInt(), notification)
+    }
 }
+
