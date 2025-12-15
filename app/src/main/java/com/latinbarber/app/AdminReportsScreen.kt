@@ -31,12 +31,10 @@ fun AdminReportsScreen(onBack: () -> Unit) {
     var endDate by remember { mutableStateOf("") }
     var isGenerating by remember { mutableStateOf(false) }
 
-    // Estados para los calendarios
     var showStartPicker by remember { mutableStateOf(false) }
     var showEndPicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState()
 
-    // Guardado de archivo
     val context = LocalContext.current
     var csvContentToSave by remember { mutableStateOf("") }
 
@@ -64,23 +62,27 @@ fun AdminReportsScreen(onBack: () -> Unit) {
             Text("Selecciona el rango de fechas:", color = GoldPrimary)
             Spacer(modifier = Modifier.height(16.dp))
 
-            // CAMPO FECHA INICIO
+            // FECHA INICIO (Colores integrados aquí mismo para evitar errores)
             OutlinedTextField(
                 value = startDate,
                 onValueChange = { },
                 label = { Text("Fecha Inicio", color = Color.Gray) },
                 readOnly = true,
                 trailingIcon = {
-                    // Usamos DateRange que es más estándar
                     Icon(Icons.Default.DateRange, null, tint = GoldPrimary, modifier = Modifier.clickable { showStartPicker = true })
                 },
-                colors = fieldColors(), // Función definida abajo
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = WhiteText,
+                    unfocusedTextColor = WhiteText,
+                    focusedBorderColor = GoldPrimary,
+                    unfocusedBorderColor = Color.Gray
+                ),
                 modifier = Modifier.fillMaxWidth().clickable { showStartPicker = true }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // CAMPO FECHA FIN
+            // FECHA FIN
             OutlinedTextField(
                 value = endDate,
                 onValueChange = { },
@@ -89,7 +91,12 @@ fun AdminReportsScreen(onBack: () -> Unit) {
                 trailingIcon = {
                     Icon(Icons.Default.DateRange, null, tint = GoldPrimary, modifier = Modifier.clickable { showEndPicker = true })
                 },
-                colors = fieldColors(), // Función definida abajo
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = WhiteText,
+                    unfocusedTextColor = WhiteText,
+                    focusedBorderColor = GoldPrimary,
+                    unfocusedBorderColor = Color.Gray
+                ),
                 modifier = Modifier.fillMaxWidth().clickable { showEndPicker = true }
             )
 
@@ -124,7 +131,7 @@ fun AdminReportsScreen(onBack: () -> Unit) {
             }
         }
 
-        // DIALOGOS DE CALENDARIO
+        // DIALOGOS DE CALENDARIO (Colores integrados aquí mismo)
         if (showStartPicker) {
             DatePickerDialog(
                 onDismissRequest = { showStartPicker = false },
@@ -138,7 +145,24 @@ fun AdminReportsScreen(onBack: () -> Unit) {
                 },
                 colors = DatePickerDefaults.colors(containerColor = DarkSurface)
             ) {
-                DatePicker(state = datePickerState, colors = calendarColors())
+                DatePicker(
+                    state = datePickerState,
+                    colors = DatePickerDefaults.colors(
+                        containerColor = DarkSurface,
+                        titleContentColor = GoldPrimary,
+                        headlineContentColor = WhiteText,
+                        weekdayContentColor = WhiteText,
+                        dayContentColor = WhiteText,
+                        selectedDayContainerColor = GoldPrimary,
+                        selectedDayContentColor = BlackBackground,
+                        todayContentColor = GoldPrimary,
+                        todayDateBorderColor = GoldPrimary,
+                        yearContentColor = WhiteText,
+                        currentYearContentColor = GoldPrimary,
+                        selectedYearContainerColor = GoldPrimary,
+                        selectedYearContentColor = BlackBackground
+                    )
+                )
             }
         }
 
@@ -155,44 +179,35 @@ fun AdminReportsScreen(onBack: () -> Unit) {
                 },
                 colors = DatePickerDefaults.colors(containerColor = DarkSurface)
             ) {
-                DatePicker(state = datePickerState, colors = calendarColors())
+                DatePicker(
+                    state = datePickerState,
+                    colors = DatePickerDefaults.colors(
+                        containerColor = DarkSurface,
+                        titleContentColor = GoldPrimary,
+                        headlineContentColor = WhiteText,
+                        weekdayContentColor = WhiteText,
+                        dayContentColor = WhiteText,
+                        selectedDayContainerColor = GoldPrimary,
+                        selectedDayContentColor = BlackBackground,
+                        todayContentColor = GoldPrimary,
+                        todayDateBorderColor = GoldPrimary,
+                        yearContentColor = WhiteText,
+                        currentYearContentColor = GoldPrimary,
+                        selectedYearContainerColor = GoldPrimary,
+                        selectedYearContentColor = BlackBackground
+                    )
+                )
             }
         }
     }
 }
 
-// === FUNCIONES AUXILIARES (Asegúrate de copiar esto también) ===
+// === FUNCIONES AUXILIARES DE LÓGICA (Ya no hay funciones de color) ===
 
 fun convertMillisToDate(millis: Long): String {
     val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
     return formatter.format(Date(millis))
 }
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun calendarColors() = DatePickerDefaults.colors(
-    containerColor = DarkSurface,
-    titleContentColor = GoldPrimary,
-    headlineContentColor = WhiteText,
-    weekdayContentColor = WhiteText,
-    dayContentColor = WhiteText,
-    selectedDayContainerColor = GoldPrimary,
-    selectedDayContentColor = BlackBackground,
-    todayContentColor = GoldPrimary,
-    todayDateBorderColor = GoldPrimary,
-    yearContentColor = WhiteText,
-    currentYearContentColor = GoldPrimary,
-    selectedYearContainerColor = GoldPrimary,
-    selectedYearContentColor = BlackBackground
-)
-
-@Composable
-fun fieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedTextColor = WhiteText,
-    unfocusedTextColor = WhiteText,
-    focusedBorderColor = GoldPrimary,
-    unfocusedBorderColor = Color.Gray
-)
 
 fun generateReport(start: String, end: String, onResult: (String) -> Unit) {
     val firestore = FirebaseFirestore.getInstance()
@@ -204,8 +219,7 @@ fun generateReport(start: String, end: String, onResult: (String) -> Unit) {
 
         firestore.collection("appointments").get().addOnSuccessListener { result ->
             val sb = StringBuilder()
-            // BOM para Excel (ayuda con tildes y caracteres especiales)
-            sb.append("\uFEFF")
+            sb.append("\uFEFF") // BOM para Excel
             sb.append("Fecha,Hora,Cliente,Correo,Barbero,Servicio,Precio,Estado\n")
 
             var count = 0
