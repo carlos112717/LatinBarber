@@ -26,7 +26,7 @@ class NotificationHelper(private val context: Context) {
                 "Recordatorios de Citas",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Notificaciones sobre tus reservas en Latin Barber"
+                description = "Notificaciones sobre tus reservas en Barbas Cut´s"
             }
             notificationManager.createNotificationChannel(channel)
         }

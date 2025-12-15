@@ -57,7 +57,7 @@ fun AdminScreen(
         ) {
             Column {
                 Text(text = "Modo Administrador", color = GoldPrimary, fontSize = 14.sp)
-                Text(text = "Gestión Latin Barber", color = WhiteText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(text = "Gestión Barbas Cut´s", color = WhiteText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
             IconButton(onClick = onLogout) {
                 Icon(Icons.Default.ExitToApp, "Salir", tint = Color.Red)

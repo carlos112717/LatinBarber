@@ -1,21 +1,18 @@
 package com.latinbarber.app
 
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -34,7 +31,12 @@ fun AdminReportsScreen(onBack: () -> Unit) {
     var endDate by remember { mutableStateOf("") }
     var isGenerating by remember { mutableStateOf(false) }
 
-    // Necesario para guardar archivos (Storage Access Framework)
+    // Estados para los calendarios
+    var showStartPicker by remember { mutableStateOf(false) }
+    var showEndPicker by remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState()
+
+    // Guardado de archivo
     val context = LocalContext.current
     var csvContentToSave by remember { mutableStateOf("") }
 
@@ -48,7 +50,11 @@ fun AdminReportsScreen(onBack: () -> Unit) {
         topBar = {
             TopAppBar(
                 title = { Text("Generar Reportes", color = WhiteText) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Atrás", tint = GoldPrimary) } },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Atrás", tint = GoldPrimary)
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = BlackBackground)
             )
         },
@@ -58,21 +64,33 @@ fun AdminReportsScreen(onBack: () -> Unit) {
             Text("Selecciona el rango de fechas:", color = GoldPrimary)
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campos de texto simples para las fechas (Formato DD/MM/AAAA)
+            // CAMPO FECHA INICIO
             OutlinedTextField(
                 value = startDate,
-                onValueChange = { startDate = it },
-                label = { Text("Fecha Inicio (dd/MM/yyyy)", color = Color.Gray) },
-                colors = OutlinedTextFieldDefaults.colors(focusedTextColor = WhiteText, focusedBorderColor = GoldPrimary),
-                modifier = Modifier.fillMaxWidth()
+                onValueChange = { },
+                label = { Text("Fecha Inicio", color = Color.Gray) },
+                readOnly = true,
+                trailingIcon = {
+                    // Usamos DateRange que es más estándar
+                    Icon(Icons.Default.DateRange, null, tint = GoldPrimary, modifier = Modifier.clickable { showStartPicker = true })
+                },
+                colors = fieldColors(), // Función definida abajo
+                modifier = Modifier.fillMaxWidth().clickable { showStartPicker = true }
             )
-            Spacer(modifier = Modifier.height(8.dp))
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // CAMPO FECHA FIN
             OutlinedTextField(
                 value = endDate,
-                onValueChange = { endDate = it },
-                label = { Text("Fecha Fin (dd/MM/yyyy)", color = Color.Gray) },
-                colors = OutlinedTextFieldDefaults.colors(focusedTextColor = WhiteText, focusedBorderColor = GoldPrimary),
-                modifier = Modifier.fillMaxWidth()
+                onValueChange = { },
+                label = { Text("Fecha Fin", color = Color.Gray) },
+                readOnly = true,
+                trailingIcon = {
+                    Icon(Icons.Default.DateRange, null, tint = GoldPrimary, modifier = Modifier.clickable { showEndPicker = true })
+                },
+                colors = fieldColors(), // Función definida abajo
+                modifier = Modifier.fillMaxWidth().clickable { showEndPicker = true }
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -82,25 +100,99 @@ fun AdminReportsScreen(onBack: () -> Unit) {
                     isGenerating = true
                     generateReport(startDate, endDate) { csvContent ->
                         isGenerating = false
-                        csvContentToSave = csvContent
-                        // Abrir selector de dónde guardar
-                        saveFileLauncher.launch("Reporte_LatinBarber.csv")
+                        if (csvContent.isEmpty()) {
+                            Toast.makeText(context, "No se encontraron datos en este rango", Toast.LENGTH_SHORT).show()
+                        } else {
+                            csvContentToSave = csvContent
+                            saveFileLauncher.launch("Reporte_LatinBarber.csv")
+                        }
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 enabled = !isGenerating && startDate.isNotEmpty() && endDate.isNotEmpty()
             ) {
-                if (isGenerating) CircularProgressIndicator(color = BlackBackground, modifier = Modifier.size(24.dp))
-                else Row {
-                    Icon(Icons.Default.Download, null, tint = BlackBackground)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("DESCARGAR EXCEL (CSV)", color = BlackBackground)
+                if (isGenerating) {
+                    CircularProgressIndicator(color = BlackBackground, modifier = Modifier.size(24.dp))
+                } else {
+                    Row {
+                        Icon(Icons.Default.Download, null, tint = BlackBackground)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("DESCARGAR EXCEL (CSV)", color = BlackBackground)
+                    }
                 }
+            }
+        }
+
+        // DIALOGOS DE CALENDARIO
+        if (showStartPicker) {
+            DatePickerDialog(
+                onDismissRequest = { showStartPicker = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        datePickerState.selectedDateMillis?.let {
+                            startDate = convertMillisToDate(it)
+                        }
+                        showStartPicker = false
+                    }) { Text("OK", color = GoldPrimary) }
+                },
+                colors = DatePickerDefaults.colors(containerColor = DarkSurface)
+            ) {
+                DatePicker(state = datePickerState, colors = calendarColors())
+            }
+        }
+
+        if (showEndPicker) {
+            DatePickerDialog(
+                onDismissRequest = { showEndPicker = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        datePickerState.selectedDateMillis?.let {
+                            endDate = convertMillisToDate(it)
+                        }
+                        showEndPicker = false
+                    }) { Text("OK", color = GoldPrimary) }
+                },
+                colors = DatePickerDefaults.colors(containerColor = DarkSurface)
+            ) {
+                DatePicker(state = datePickerState, colors = calendarColors())
             }
         }
     }
 }
+
+// === FUNCIONES AUXILIARES (Asegúrate de copiar esto también) ===
+
+fun convertMillisToDate(millis: Long): String {
+    val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    return formatter.format(Date(millis))
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun calendarColors() = DatePickerDefaults.colors(
+    containerColor = DarkSurface,
+    titleContentColor = GoldPrimary,
+    headlineContentColor = WhiteText,
+    weekdayContentColor = WhiteText,
+    dayContentColor = WhiteText,
+    selectedDayContainerColor = GoldPrimary,
+    selectedDayContentColor = BlackBackground,
+    todayContentColor = GoldPrimary,
+    todayDateBorderColor = GoldPrimary,
+    yearContentColor = WhiteText,
+    currentYearContentColor = GoldPrimary,
+    selectedYearContainerColor = GoldPrimary,
+    selectedYearContentColor = BlackBackground
+)
+
+@Composable
+fun fieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedTextColor = WhiteText,
+    unfocusedTextColor = WhiteText,
+    focusedBorderColor = GoldPrimary,
+    unfocusedBorderColor = Color.Gray
+)
 
 fun generateReport(start: String, end: String, onResult: (String) -> Unit) {
     val firestore = FirebaseFirestore.getInstance()
@@ -112,24 +204,30 @@ fun generateReport(start: String, end: String, onResult: (String) -> Unit) {
 
         firestore.collection("appointments").get().addOnSuccessListener { result ->
             val sb = StringBuilder()
-            sb.append("Fecha,Hora,Cliente,Correo,Barbero,Servicio,Precio,Estado\n") // Encabezado CSV
+            // BOM para Excel (ayuda con tildes y caracteres especiales)
+            sb.append("\uFEFF")
+            sb.append("Fecha,Hora,Cliente,Correo,Barbero,Servicio,Precio,Estado\n")
 
+            var count = 0
             for (doc in result.documents) {
                 val appt = doc.toObject(Appointment::class.java)
                 if (appt != null) {
                     try {
                         val apptDate = sdf.parse(appt.date)
-                        // Filtrar por rango
-                        if (apptDate != null && !apptDate.before(startDateObj) && !apptDate.after(endDateObj)) {
+                        if (apptDate != null &&
+                            (apptDate == startDateObj || apptDate.after(startDateObj)) &&
+                            (apptDate == endDateObj || apptDate.before(endDateObj))) {
+
                             sb.append("${appt.date},${appt.time},${appt.customerName},${appt.customerEmail},${appt.barberName},${appt.serviceName},${appt.price},${appt.status}\n")
+                            count++
                         }
                     } catch (e: Exception) {}
                 }
             }
-            onResult(sb.toString())
+            if (count > 0) onResult(sb.toString()) else onResult("")
         }
     } catch (e: Exception) {
-        onResult("Error en formato de fechas")
+        onResult("")
     }
 }
 

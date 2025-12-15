@@ -47,7 +47,7 @@ fun HomeScreen(
             Column {
                 Text(text = "Hola, $userName", color = Color.Gray, fontSize = 14.sp)
                 Text(
-                    text = "Bienvenido a Latin Barber",
+                    text = "Bienvenido a Barbas Cut's",
                     color = WhiteText,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold

@@ -16,7 +16,7 @@ class ReminderReceiver : BroadcastReceiver() {
         // Usamos el mismo canal "citas_channel" que creamos en el Helper
         val notification = NotificationCompat.Builder(context, "citas_channel")
             .setSmallIcon(android.R.drawable.ic_popup_reminder) // Puedes cambiarlo por R.drawable.logo_lb si quieres
-            .setContentTitle("⏰ Recordatorio Latin Barber")
+            .setContentTitle("⏰ Recordatorio Barbas Cut´s")
             .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)

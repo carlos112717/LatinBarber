@@ -13,23 +13,32 @@ class AdminViewModel : ViewModel() {
     private val firestore = FirebaseFirestore.getInstance()
     private var notificationHelper: NotificationHelper? = null
 
-    // Esta función se activará al entrar al Panel de Admin
+    // Esta bandera evita que suenen las notificaciones de las citas que YA existían al abrir la app
+    private var isInitialLoad = true
+
     fun initAdmin(context: Context) {
         notificationHelper = NotificationHelper(context)
         startListening()
         deleteOldAppointments()
     }
 
-    // 1. ESCUCHA GLOBAL DE CAMBIOS (Para Notificaciones)
+    // 1. ESCUCHA GLOBAL DE CAMBIOS
     private fun startListening() {
         firestore.collection("appointments")
             .addSnapshotListener { snapshots, error ->
                 if (error != null || snapshots == null) return@addSnapshotListener
 
+                // Si es la primera carga (al abrir la app), no notificamos nada, solo marcamos como "cargado"
+                if (isInitialLoad) {
+                    isInitialLoad = false
+                    return@addSnapshotListener
+                }
+
+                // A partir de aquí, cualquier cambio ES EN VIVO
                 for (dc in snapshots.documentChanges) {
                     val appt = dc.document.toObject(Appointment::class.java)
 
-                    // ALGUIEN CANCELÓ (Borraron una cita)
+                    // ALGUIEN CANCELÓ
                     if (dc.type == DocumentChange.Type.REMOVED) {
                         notificationHelper?.showCancellationNotification(
                             customerName = appt.customerName,
@@ -37,15 +46,12 @@ class AdminViewModel : ViewModel() {
                         )
                     }
 
-                    // ALGUIEN RESERVÓ (Nueva cita reciente)
+                    // ALGUIEN RESERVÓ
                     if (dc.type == DocumentChange.Type.ADDED) {
-                        val isRecent = (System.currentTimeMillis() - appt.createdAt) < 60000
-                        if (isRecent) {
-                            notificationHelper?.showNewBookingNotification(
-                                customerName = appt.customerName,
-                                time = "${appt.date} ${appt.time}"
-                            )
-                        }
+                        notificationHelper?.showNewBookingNotification(
+                            customerName = appt.customerName,
+                            time = "${appt.date} ${appt.time}"
+                        )
                     }
                 }
             }
@@ -65,9 +71,7 @@ class AdminViewModel : ViewModel() {
                         try {
                             val date = sdf.parse(appt.date)
                             if (date != null) {
-                                // Si la cita fue hace más de 3 días (fecha de cita + 3 días < hoy)
                                 if ((date.time + threeDaysInMillis) < now) {
-                                    // ¡BORRAR!
                                     firestore.collection("appointments").document(doc.id).delete()
                                 }
                             }

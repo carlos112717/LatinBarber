@@ -17,13 +17,13 @@ class AdminAppointmentsViewModel : ViewModel() {
     private val _isLoading = MutableStateFlow(true)
     val isLoading = _isLoading.asStateFlow()
 
-    // 👇 ESTA VARIABLE ES LA QUE TE FALTABA PARA QUE FUNCIONE EL CÓDIGO
     private var notificationHelper: NotificationHelper? = null
 
-    // Esta función inicia la "escucha" en tiempo real
+    // Variable para evitar notificar las citas que ya existían al abrir la app
+    private var isInitialLoad = true
+
     fun startListening(context: Context) {
         notificationHelper = NotificationHelper(context)
-
         _isLoading.value = true
 
         firestore.collection("appointments")
@@ -34,37 +34,42 @@ class AdminAppointmentsViewModel : ViewModel() {
                 }
 
                 if (snapshots != null) {
-                    val list = snapshots.toObjects(Appointment::class.java)
-                    // Ordenamos: las más nuevas primero
+                    // 1. SOLUCIÓN AL CRASH: Mapeamos manualmente el ID del documento
+                    val list = snapshots.documents.mapNotNull { doc ->
+                        val appointment = doc.toObject(Appointment::class.java)
+                        // ¡Aquí está la magia! Copiamos el ID real de Firebase al objeto
+                        appointment?.copy(id = doc.id)
+                    }
+
                     _appointments.value = list.sortedByDescending { it.createdAt }
                     _isLoading.value = false
 
-                    // === DETECTOR DE CAMBIOS (NOTIFICACIONES) ===
-                    for (dc in snapshots.documentChanges) {
-                        val appt = dc.document.toObject(Appointment::class.java)
+                    // 2. LÓGICA DE NOTIFICACIONES MEJORADA
+                    if (!isInitialLoad) { // Solo notificamos cambios DESPUÉS de la carga inicial
+                        for (dc in snapshots.documentChanges) {
+                            val appt = dc.document.toObject(Appointment::class.java)
 
-                        // CASO 1: SE CREÓ UNA NUEVA CITA (ADDED)
-                        if (dc.type == DocumentChange.Type.ADDED) {
-                            // Filtro de tiempo: Solo notificamos si se creó hace menos de 1 minuto
-                            // (Para que no suenen todas las citas viejas al abrir la app)
-                            val isRecent = (System.currentTimeMillis() - appt.createdAt) < 60000
-
-                            if (isRecent) {
-                                notificationHelper?.showNewBookingNotification(
-                                    customerName = appt.customerName,
-                                    time = "${appt.date} ${appt.time}"
-                                )
+                            when (dc.type) {
+                                DocumentChange.Type.ADDED -> {
+                                    // Notificamos si es una cita nueva
+                                    notificationHelper?.showNewBookingNotification(
+                                        customerName = appt.customerName,
+                                        time = "${appt.date} ${appt.time}"
+                                    )
+                                }
+                                DocumentChange.Type.REMOVED -> {
+                                    // Notificamos cancelación
+                                    notificationHelper?.showCancellationNotification(
+                                        customerName = appt.customerName,
+                                        time = "${appt.date} ${appt.time}"
+                                    )
+                                }
+                                else -> {}
                             }
                         }
-
-                        // CASO 2: SE CANCELÓ UNA CITA (REMOVED)
-                        else if (dc.type == DocumentChange.Type.REMOVED) {
-                            // Al borrar no podemos ver la fecha de creación, así que asumimos que acaba de pasar
-                            notificationHelper?.showCancellationNotification(
-                                customerName = appt.customerName,
-                                time = "${appt.date} ${appt.time}"
-                            )
-                        }
+                    } else {
+                        // Terminó la carga inicial, los siguientes cambios sí son notificaciones reales
+                        isInitialLoad = false
                     }
                 }
             }

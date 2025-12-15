@@ -64,8 +64,8 @@ fun AuthScreen(viewModel: AuthViewModel = viewModel()) {
         // Reemplazamos el Texto por la Imagen
         Image(
             // ASEGÚRATE DE QUE EL NOMBRE COINCIDA CON EL ARCHIVO QUE PEGASTE EN DRAWABLE
-            painter = painterResource(id = R.drawable.logo_lb),
-            contentDescription = "Logo Latin Barber",
+            painter = painterResource(id = R.drawable.logo_bc),
+            contentDescription = "Logo Barbas Cut´s",
             modifier = Modifier
                 .size(180.dp) // Ajusta el tamaño según necesites (ej. 200.dp, 150.dp)
                 .padding(bottom = 16.dp)
@@ -73,7 +73,7 @@ fun AuthScreen(viewModel: AuthViewModel = viewModel()) {
 
         // Opcional: Dejamos el texto del nombre más pequeño abajo del logo
         //Text(
-        //   text = "LATIN BARBER",
+        //   text = "Barbas Cut´s",
         //    color = GoldPrimary,
         //   fontSize = 24.sp,
         //    fontWeight = FontWeight.Bold,

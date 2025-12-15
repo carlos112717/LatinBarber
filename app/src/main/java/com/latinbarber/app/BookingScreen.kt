@@ -282,7 +282,7 @@ fun BookingScreen(
                     )
 
                     Text(
-                        text = "Te esperamos en Latin Barber",
+                        text = "Te esperamos en Barbas Cut´s",
                         color = Color.Gray,
                         fontSize = 16.sp
                     )
